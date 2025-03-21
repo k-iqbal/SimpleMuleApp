@@ -1,0 +1,49 @@
+name: MuleSoft CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Build Mule Application
+        run: |
+          # Install Maven (if not already available)
+          sudo apt-get update
+          sudo apt-get install -y maven
+
+          # Build the Mule project
+          mvn clean package -DskipTests
+
+      - name: Deploy to CloudHub 2.0
+        env:
+          ANYPOINT_USERNAME: ${{ secrets.ANYPOINT_USERNAME }}
+          ANYPOINT_PASSWORD: ${{ secrets.ANYPOINT_PASSWORD }}
+          ANYPOINT_ORG_ID: ${{ secrets.ANYPOINT_ORG_ID }}
+          ANYPOINT_ENV_ID: ${{ secrets.ANYPOINT_ENV_ID }}
+        run: |
+          # Install Mule Maven Plugin
+          mvn org.apache.maven.plugins:maven-dependency-plugin:3.1.2:get \
+            -Dartifact=org.mule.tools:mule-maven-plugin:3.6.0
+
+          # Deploy to CloudHub 2.0
+          mvn mule:deploy \
+            -Dmule.artifact="target/SimpleMuleApp-1.0.0-mule-application.jar" \
+            -Dmule.deploy \
+            -Dmule.username=${ANYPOINT_USERNAME} \
+            -Dmule.password=${ANYPOINT_PASSWORD} \
+            -Dmule.orgId=${ANYPOINT_ORG_ID} \
+            -Dmule.envId=${ANYPOINT_ENV_ID}
